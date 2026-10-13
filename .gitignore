@@ -1,0 +1,29 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Secrets locaux (ne jamais committer)
+*.env
+.env*
+*.secret*
+*.pem
+*.key
+
+# Ansible
+ansible/inventory/hosts.yml
+*.retry
+
+# Divers
+.vscode/
+*.swp
+
+# Cache ansible-lint
+.ansible/

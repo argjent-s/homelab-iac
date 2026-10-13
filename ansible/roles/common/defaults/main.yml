@@ -1,0 +1,6 @@
+---
+common_timezone: "Europe/Zurich"
+common_packages:
+  - ca-certificates
+  - curl
+  - unattended-upgrades

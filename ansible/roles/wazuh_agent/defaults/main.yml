@@ -1,0 +1,5 @@
+---
+wazuh_agent_manager: "wazuh.example.lan"
+wazuh_agent_version: "4.14.5-1"
+wazuh_agent_repo_key_url: "https://packages.wazuh.com/key/GPG-KEY-WAZUH"
+wazuh_agent_repo_url: "https://packages.wazuh.com/4.x/apt/"

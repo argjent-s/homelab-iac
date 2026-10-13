@@ -1,0 +1,4 @@
+---
+# Connexion root par clé uniquement (Ansible se connecte en root sur les LXC du lab).
+hardening_ssh_permit_root_login: "prohibit-password"
+hardening_ssh_max_auth_tries: 3

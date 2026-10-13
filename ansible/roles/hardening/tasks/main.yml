@@ -1,0 +1,22 @@
+---
+- name: Durcir la configuration SSH (fichier dédié, prioritaire sur sshd_config)
+  ansible.builtin.template:
+    src: 10-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Valider et redémarrer SSH
+
+- name: Restreindre les permissions des fichiers sensibles
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode }}"
+    owner: root
+    group: root
+  loop:
+    - { path: /etc/ssh/sshd_config, mode: "0600" }
+    - { path: /root/.ssh, mode: "0700" }
+    - { path: /root/.ssh/authorized_keys, mode: "0600" }
+  loop_control:
+    label: "{{ item.path }}"

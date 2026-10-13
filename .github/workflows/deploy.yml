@@ -1,0 +1,87 @@
+name: Deploy - Homelab
+
+# Déploiement sur le runner auto-hébergé (LXC ctl-iac), uniquement depuis main.
+# Jamais déclenché par une pull request : une PR externe ne peut pas exécuter de code dans le homelab.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "ansible/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homelab-deploy
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  PLAN_FILE: /srv/terraform/plans/${{ github.run_id }}.tfplan
+
+jobs:
+  plan:
+    name: Terraform plan
+    runs-on: [self-hosted, homelab]
+    defaults:
+      run:
+        working-directory: terraform
+    env:
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+    outputs:
+      changes: ${{ steps.plan.outputs.changes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Init
+        run: terraform init -input=false
+      - name: Plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -input=false -detailed-exitcode -out="$PLAN_FILE"
+          code=$?
+          set -e
+          if [ "$code" -eq 1 ]; then exit 1; fi
+          if [ "$code" -eq 2 ]; then echo "changes=true" >> "$GITHUB_OUTPUT"; else echo "changes=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Résumé du plan
+        run: |
+          {
+            echo "### Terraform plan"
+            echo '```'
+            terraform show -no-color "$PLAN_FILE"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    name: Terraform apply + Ansible
+    needs: plan
+    runs-on: [self-hosted, homelab]
+    # Environnement protégé : approbation manuelle obligatoire avant d'appliquer.
+    environment: homelab
+    env:
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Init
+        working-directory: terraform
+        run: terraform init -input=false
+      - name: Apply (plan approuvé, sans re-planification)
+        if: needs.plan.outputs.changes == 'true'
+        working-directory: terraform
+        run: terraform apply -input=false "$PLAN_FILE"
+      - name: Générer l'inventaire Ansible depuis l'état Terraform
+        working-directory: terraform
+        run: terraform output -raw ansible_inventory > ../ansible/inventory/hosts.yml
+      - name: Configurer les conteneurs (Ansible)
+        working-directory: ansible
+        run: ansible-playbook site.yml
+      - name: Supprimer le fichier de plan
+        if: always()
+        run: rm -f "$PLAN_FILE"

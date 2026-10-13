@@ -1,0 +1,52 @@
+---
+- name: Créer le répertoire des clés APT
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Récupérer la clé GPG du dépôt Wazuh
+  ansible.builtin.get_url:
+    url: "{{ wazuh_agent_repo_key_url }}"
+    dest: /etc/apt/keyrings/wazuh.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Déclarer le dépôt APT Wazuh (format deb822)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/wazuh.sources
+    content: |
+      # Géré par Ansible (homelab-iac)
+      Types: deb
+      URIs: {{ wazuh_agent_repo_url }}
+      Suites: stable
+      Components: main
+      Signed-By: /etc/apt/keyrings/wazuh.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Installer l'agent Wazuh et l'enrôler auprès du manager
+  ansible.builtin.apt:
+    name: "wazuh-agent={{ wazuh_agent_version }}"
+    state: present
+    update_cache: true
+  environment:
+    WAZUH_MANAGER: "{{ wazuh_agent_manager }}"
+    WAZUH_AGENT_NAME: "{{ inventory_hostname }}"
+  notify: Redémarrer l'agent Wazuh
+
+- name: Bloquer les mises à jour de l'agent (version alignée sur le manager)
+  ansible.builtin.dpkg_selections:
+    name: wazuh-agent
+    selection: hold
+
+- name: Activer et démarrer l'agent Wazuh
+  ansible.builtin.systemd:
+    name: wazuh-agent
+    enabled: true
+    state: started
+    daemon_reload: true

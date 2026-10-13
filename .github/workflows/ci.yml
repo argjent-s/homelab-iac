@@ -1,0 +1,62 @@
+name: CI - Qualité et sécurité
+
+# Contrôles exécutés sur les runners hébergés par GitHub (aucun accès au homelab).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform (fmt + validate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+      - name: Format
+        run: terraform fmt -check -recursive
+      - name: Init (sans backend)
+        run: terraform init -backend=false -input=false
+      - name: Validate
+        run: terraform validate
+
+  ansible:
+    name: Ansible (ansible-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Installer ansible-lint et les collections
+        run: |
+          pip install ansible-lint
+          ansible-galaxy collection install -r ansible/requirements.yml
+      - name: Lint
+        working-directory: ansible
+        run: ansible-lint
+
+  security:
+    name: Scan de sécurité (Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Installer Checkov
+        run: pip install checkov
+      - name: Scanner le code (IaC, Ansible, workflows, secrets)
+        run: checkov --directory . --framework terraform ansible github_actions secrets --compact --quiet

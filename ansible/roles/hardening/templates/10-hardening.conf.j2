@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# Durcissement SSH — homelab-iac
+PermitRootLogin {{ hardening_ssh_permit_root_login }}
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+X11Forwarding no
+MaxAuthTries {{ hardening_ssh_max_auth_tries }}
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2

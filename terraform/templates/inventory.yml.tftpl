@@ -1,0 +1,9 @@
+# Fichier généré par Terraform (output ansible_inventory) — ne pas modifier à la main.
+all:
+  children:
+    lxc_terraform:
+      hosts:
+%{ for name, ip in hosts ~}
+        ${name}:
+          ansible_host: ${ip}
+%{ endfor ~}
