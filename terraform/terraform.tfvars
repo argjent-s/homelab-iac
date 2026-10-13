@@ -18,6 +18,7 @@ containers = {
   "lab-demo01" = {
     vm_id       = 301
     ip          = "192.168.1.24/24"
+    memory      = 2048
     tags        = ["demo"]
     description = "Conteneur de démonstration du pipeline IaC."
   }
