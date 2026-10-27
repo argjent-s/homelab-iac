@@ -6,7 +6,7 @@ terraform {
     # Version 0.x : on fige la mineure, les montées de version passent par une PR (Dependabot).
     proxmox = {
       source  = "bpg/proxmox"
-      version = "~> 0.116.0"
+      version = "~> 0.118.0"
     }
   }
 
